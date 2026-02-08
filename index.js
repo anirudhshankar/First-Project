@@ -1,44 +1,37 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse form data (for POST body)
+// Parse JSON and form data (for POST body)
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Hello World route
-app.get('/', (req, res) => {
+// API: Hello World
+app.get('/api/hello', (req, res) => {
   res.send('Hello World!');
 });
 
-// Login form (GET) – show the form
-app.get('/login', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Login</title>
-      </head>
-      <body>
-        <h1>Login</h1>
-        <form method="POST" action="/login">
-          <label for="username">User name</label>
-          <input type="text" id="username" name="username" required>
-          <br><br>
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required>
-          <br><br>
-          <button type="submit">Submit</button>
-        </form>
-      </body>
-    </html>
-  `);
-});
-
-// Login form (POST) – handle form submission
+// API: Login (POST) – handle form submission from React
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   res.send(`Received: user name = ${username}, password = ${password}`);
+});
+
+// Serve React build in production
+const distPath = path.join(__dirname, 'client', 'dist');
+app.use(express.static(distPath));
+
+// Catch-all handler: serve index.html for non-API routes (SPA fallback)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next(); // Let API routes pass through
+  }
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      res.status(500).send('Client not built. Run: cd client && npm run build');
+    }
+  });
 });
 
 // Start the server
